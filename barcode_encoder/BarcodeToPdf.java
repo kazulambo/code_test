@@ -12,31 +12,36 @@ import java.io.*;
 public class BarcodeToPdf {
 
     public static void main(String[] args) throws Exception {
-        String barcodeData = "2129034231";
-        File barcodeImage = new File("barcode.png");
+        String templatePath = "template.pdf";
+        String outputPath = "output.pdf";
+        String imagePath = "barcode.png";
 
-        // 1. バーコードPNG画像を生成
-        generateBarcodeImage(barcodeData, barcodeImage);
+        try (PDDocument document = PDDocument.load(new File(templatePath))) {
+            PDAcroForm form = document.getDocumentCatalog().getAcroForm();
+            PDField field = form.getField("barcodeImage"); // フィールド名はPDFで確認
 
-        // 2. PDFに貼り付け
-        try (PDDocument document = new PDDocument()) {
-            PDPage page = new PDPage(PDRectangle.A4);
-            document.addPage(page);
+            if (field != null) {
+                PDAnnotationWidget widget = field.getWidgets().get(0);
+                PDRectangle rect = widget.getRectangle();
+                PDPage page = widget.getPage();
 
-            PDImageXObject pdImage = PDImageXObject.createFromFile("barcode.png", document);
-            float imageWidth = 200;
-            float imageHeight = 50;
-            float x = 100;
-            float y = 700;
+                // バーコード画像読み込み
+                BufferedImage bufferedImage = ImageIO.read(new File(imagePath));
+                PDImageXObject image = PDImageXObject.createFromFile(imagePath, document);
 
-            try (var contentStream = new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page)) {
-                contentStream.drawImage(pdImage, x, y, imageWidth, imageHeight);
+                // フィールドの位置に画像を貼り付け
+                try (PDPageContentStream contentStream = new PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND, true)) {
+                    contentStream.drawImage(image, rect.getLowerLeftX(), rect.getLowerLeftY(), rect.getWidth(), rect.getHeight());
+                }
+
+                // フィールドを非表示にすることで画像だけ表示される
+                widget.setPrinted(true);
+                widget.setHidden(true);
             }
 
-            document.save("output.pdf");
+            document.save(outputPath);
+            System.out.println("✅ PDF生成完了：" + outputPath);
         }
-
-        System.out.println("✅ PDF生成完了：output.pdf");
     }
 
     public static void generateBarcodeImage(String data, File outputFile) throws IOException {
