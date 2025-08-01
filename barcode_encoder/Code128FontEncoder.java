@@ -1,7 +1,5 @@
 import org.krysalis.barcode4j.impl.code128.Code128Bean;
-import org.krysalis.barcode4j.impl.code128.Code128Constants;
 import org.krysalis.barcode4j.impl.code128.Code128LogicImpl;
-import java.util.Arrays;
 
 public class Code128FontEncoder {
 
@@ -14,7 +12,7 @@ public class Code128FontEncoder {
     public String getEncodedFontString(String data) {
         // ステップ1: データを数値配列にエンコード
         int[] encodedValues = encodeToValues(data);
-        
+
         // ステップ2: 数値配列をフォント用文字列にマッピング
         return mapValuesToFontString(encodedValues);
     }
@@ -24,8 +22,15 @@ public class Code128FontEncoder {
      */
     private int[] encodeToValues(String data) {
         Code128Bean bean = new Code128Bean();
-        bean.setCodeset(Code128Constants.CODESET_AUTO);
+        
+        // ★★★ 修正点 ★★★
+        // Code128LogicImplはデフォルトでコードセットを自動最適化するため、
+        // `setCodeset` のような設定は不要です。
+        
+        // エンコードロジックの実装を取得
         Code128LogicImpl logic = new Code128LogicImpl(bean);
+        
+        // エンコードを実行し、結果を数値配列として返します
         return logic.encode(data);
     }
 
@@ -35,6 +40,7 @@ public class Code128FontEncoder {
     private String mapValuesToFontString(int[] values) {
         StringBuilder fontString = new StringBuilder();
         for (int value : values) {
+            // Code128のキャラクタセット値からフォント用の文字へのマッピングルール
             if (value >= 95) {
                 fontString.append((char) (value + 105));
             } else {
@@ -47,22 +53,11 @@ public class Code128FontEncoder {
     public static void main(String[] args) {
         Code128FontEncoder encoder = new Code128FontEncoder();
 
-        // --- 例1: 通常のCode128 ---
-        String simpleData = "Test12345";
-        String encodedSimple = encoder.getEncodedFontString(simpleData);
-        System.out.println("データ: " + simpleData);
-        System.out.println("エンコード結果: " + encodedSimple);
-        System.out.println("---------------------------------");
-
-
-        // --- 例2: GS1-128 ---
-        // アプリケーション識別子(01)と(10)を持つGS1-128データ
+        // --- 例: GS1-128 ---
         String gs1Data = "(01)94912345678902(10)ABC-123";
         String encodedGs1 = encoder.getEncodedFontString(gs1Data);
+        
         System.out.println("データ: " + gs1Data);
         System.out.println("エンコード結果: " + encodedGs1);
-        System.out.println("---------------------------------");
-        
-        // 生成された文字列をテキストエディタに貼り付け、Code128フォントを適用するとバーコードが表示されます。
     }
 }
